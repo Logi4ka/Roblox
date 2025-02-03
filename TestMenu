@@ -62,7 +62,7 @@ local titleBar = create("Frame", {
 create("UICorner", {CornerRadius = UDim.new(0,8), Parent = titleBar})
 local titleText = create("TextLabel", {
 	Text = "Logdrinos Menu v3.4",
-	Size = UDim2.new(1, -40, 1, 0),
+	Size = UDim2.new(1, -60, 1, 0),
 	Position = UDim2.new(0,10,0,0),
 	BackgroundTransparency = 1,
 	TextColor3 = Color3.new(1,1,1),
@@ -72,37 +72,14 @@ local titleText = create("TextLabel", {
 	Parent = titleBar,
 })
 
--- Кнопка сворачивания
-local minimizeButton = create("TextButton", {
-	Name = "MinimizeButton",
-	Size = UDim2.new(0,20,0,20),
-	Position = UDim2.new(1,-25,0,5),
-	BackgroundColor3 = Color3.fromRGB(65,65,65),
-	BorderSizePixel = 0,
-	Text = "",
-	Active = true,
-	Selectable = true,
-	Parent = titleBar,
-})
-create("UICorner", {CornerRadius = UDim.new(0,4), Parent = minimizeButton})
-local indicator = create("Frame", {
-	Size = UDim2.new(0,8,0,8),
-	Position = UDim2.new(0.5,-4,0.5,-4),
-	BackgroundColor3 = Color3.new(1,1,1),
-	BorderSizePixel = 0,
-	Parent = minimizeButton,
-})
-create("UICorner", {CornerRadius = UDim.new(1,0), Parent = indicator})
-
--- Новая кнопка для уничтожения скрипта (Destroy)
+-- Кнопка уничтожения скрипта (Destroy) – теперь справа
 local destroyButton = create("TextButton", {
 	Name = "DestroyButton",
 	Size = UDim2.new(0,20,0,20),
-	-- Расположим её слева от кнопки сворачивания:
-	Position = UDim2.new(1, -50, 0, 5),
-	BackgroundColor3 = Color3.fromRGB(255,0,0),  -- красный цвет для предупреждения
+	Position = UDim2.new(1, -25, 0, 5),  -- справа
+	BackgroundColor3 = Color3.fromRGB(255,0,0),  -- красный цвет
 	BorderSizePixel = 0,
-	Text = "X",
+	Text = "✕",
 	TextColor3 = Color3.new(1,1,1),
 	Font = Enum.Font.GothamBold,
 	TextSize = 14,
@@ -114,6 +91,23 @@ create("UICorner", {CornerRadius = UDim.new(0,4), Parent = destroyButton})
 destroyButton.MouseButton1Click:Connect(function()
 	script:Destroy()
 end)
+
+-- Кнопка сворачивания – теперь слева от кнопки уничтожения и с изменённым значком
+local minimizeButton = create("TextButton", {
+	Name = "MinimizeButton",
+	Size = UDim2.new(0,20,0,20),
+	Position = UDim2.new(1, -50, 0, 5),  -- слева от destroyButton
+	BackgroundColor3 = Color3.fromRGB(65,65,65),
+	BorderSizePixel = 0,
+	Text = "▾",
+	TextColor3 = Color3.new(1,1,1),
+	Font = Enum.Font.GothamBold,
+	TextSize = 14,
+	Active = true,
+	Selectable = true,
+	Parent = titleBar,
+})
+create("UICorner", {CornerRadius = UDim.new(0,4), Parent = minimizeButton})
 
 -- Функция для создания кнопок меню
 local function createMenuButton(name, text, positionY, parent)
