@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 if playerGui:FindFirstChild("LogdrinosMenu") then return end
@@ -13,9 +14,15 @@ local isNoClip = false
 local isDragging = false
 local dragStart
 local startPos
-local isDraggingSlider = false
-local isDraggingJump = false
 local teleportMode = false
+
+local minSpeed = 16
+local maxSpeed = 100
+local minJump = 50
+local maxJump = 100
+
+local speedActivated = false
+local jumpActivated = false
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "LogdrinosMenu"
@@ -24,7 +31,7 @@ screenGui.Parent = playerGui
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 200, 0, 295)
+mainFrame.Size = UDim2.new(0, 200, 0, 260)
 mainFrame.Position = UDim2.new(0.5, -100, 0.5, -150)
 mainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 mainFrame.BorderSizePixel = 0
@@ -50,7 +57,7 @@ titleCorner.CornerRadius = UDim.new(0, 8)
 titleCorner.Parent = titleBar
 
 local titleText = Instance.new("TextLabel")
-titleText.Text = "Logdrinos Menu v3.4"
+titleText.Text = "Logdrinos Menu v3.5"
 titleText.Size = UDim2.new(1, -40, 1, 0)
 titleText.Position = UDim2.new(0, 10, 0, 0)
 titleText.BackgroundTransparency = 1
@@ -124,7 +131,7 @@ noClipButton.Position = UDim2.new(0.05, 0, 0, 122)
 noClipButton.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
 noClipButton.BorderSizePixel = 0
 noClipButton.Text = "Ходить сквозь стены"
-noClipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+noClipButton.TextColor3 = Color3.fromRGB(255,255,255)
 noClipButton.TextSize = 14
 noClipButton.Font = Enum.Font.Gotham
 noClipButton.Active = true
@@ -151,66 +158,15 @@ speedButton.BorderSizePixel = 0
 speedButton.TextColor3 = Color3.fromRGB(255,255,255)
 speedButton.TextSize = 14
 speedButton.Font = Enum.Font.Gotham
-speedButton.Text = "Скорость: " .. currentSpeed
+speedButton.Text = "Большая скорость"
 speedButton.Active = true
 speedButton.Selectable = true
 speedButton.Parent = speedFrame
 
-local speedInput = Instance.new("TextBox")
-speedInput.Size = speedButton.Size
-speedInput.Position = speedButton.Position
-speedInput.BackgroundColor3 = Color3.fromRGB(65,65,65)
-speedInput.BorderSizePixel = 0
-speedInput.TextColor3 = Color3.fromRGB(255,255,255)
-speedInput.TextSize = 14
-speedInput.Font = Enum.Font.Gotham
-speedInput.Text = tostring(currentSpeed)
-speedInput.ClearTextOnFocus = true
-speedInput.Visible = false
-speedInput.Active = true
-speedInput.Selectable = true
-speedInput.Parent = speedFrame
-speedInput:GetPropertyChangedSignal("Text"):Connect(function()
-	local newText = speedInput.Text:match("^%d*$") or ""
-	if newText ~= speedInput.Text then
-		speedInput.Text = newText
-	end
-end)
-
-local speedSlider = Instance.new("Frame")
-speedSlider.Size = UDim2.new(0.9, 0, 0, 4)
-speedSlider.Position = UDim2.new(0.05, 0, 0, 50)
-speedSlider.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
-speedSlider.BorderSizePixel = 0
-speedSlider.Active = true
-speedSlider.Selectable = true
-speedSlider.Parent = speedFrame
-
-local sliderCorner = Instance.new("UICorner")
-sliderCorner.CornerRadius = UDim.new(1, 0)
-sliderCorner.Parent = speedSlider
-
-local minSpeed = 16
-local maxSpeed = 100
-local initPerc = (currentSpeed - minSpeed) / (maxSpeed - minSpeed)
-local sliderButton = Instance.new("TextButton")
-sliderButton.Size = UDim2.new(0, 16, 0, 16)
-sliderButton.Position = UDim2.new(initPerc, -8, 0.5, -8)
-sliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-sliderButton.BorderSizePixel = 0
-sliderButton.Text = ""
-sliderButton.Active = true
-sliderButton.Selectable = true
-sliderButton.Parent = speedSlider
-
-local sliderButtonCorner = Instance.new("UICorner")
-sliderButtonCorner.CornerRadius = UDim.new(1, 0)
-sliderButtonCorner.Parent = sliderButton
-
 local jumpFrame = Instance.new("Frame")
 jumpFrame.Name = "JumpFrame"
 jumpFrame.Size = UDim2.new(0, 200, 0, 60)
-jumpFrame.Position = UDim2.new(0, 0, 0, 230)
+jumpFrame.Position = UDim2.new(0, 0, 0, 210)
 jumpFrame.BackgroundTransparency = 1
 jumpFrame.Active = true
 jumpFrame.Selectable = true
@@ -224,61 +180,10 @@ jumpButton.BorderSizePixel = 0
 jumpButton.TextColor3 = Color3.fromRGB(255,255,255)
 jumpButton.TextSize = 14
 jumpButton.Font = Enum.Font.Gotham
-jumpButton.Text = "Прыжок: " .. currentJump
+jumpButton.Text = "Высокий прыжок"
 jumpButton.Active = true
 jumpButton.Selectable = true
 jumpButton.Parent = jumpFrame
-
-local jumpInput = Instance.new("TextBox")
-jumpInput.Size = jumpButton.Size
-jumpInput.Position = jumpButton.Position
-jumpInput.BackgroundColor3 = Color3.fromRGB(65,65,65)
-jumpInput.BorderSizePixel = 0
-jumpInput.TextColor3 = Color3.fromRGB(255,255,255)
-jumpInput.TextSize = 14
-jumpInput.Font = Enum.Font.Gotham
-jumpInput.Text = tostring(currentJump)
-jumpInput.ClearTextOnFocus = true
-jumpInput.Visible = false
-jumpInput.Active = true
-jumpInput.Selectable = true
-jumpInput.Parent = jumpFrame
-jumpInput:GetPropertyChangedSignal("Text"):Connect(function()
-	local newText = jumpInput.Text:match("^%d*$") or ""
-	if newText ~= jumpInput.Text then
-		jumpInput.Text = newText
-	end
-end)
-
-local jumpSlider = Instance.new("Frame")
-jumpSlider.Size = UDim2.new(0.9, 0, 0, 4)
-jumpSlider.Position = UDim2.new(0.05, 0, 0, 50)
-jumpSlider.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
-jumpSlider.BorderSizePixel = 0
-jumpSlider.Active = true
-jumpSlider.Selectable = true
-jumpSlider.Parent = jumpFrame
-
-local jumpSliderCorner = Instance.new("UICorner")
-jumpSliderCorner.CornerRadius = UDim.new(1, 0)
-jumpSliderCorner.Parent = jumpSlider
-
-local minJump = 50
-local maxJump = 100
-local initJumpPerc = (currentJump - minJump) / (maxJump - minJump)
-local jumpSliderButton = Instance.new("TextButton")
-jumpSliderButton.Size = UDim2.new(0, 16, 0, 16)
-jumpSliderButton.Position = UDim2.new(initJumpPerc, -8, 0.5, -8)
-jumpSliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-jumpSliderButton.BorderSizePixel = 0
-jumpSliderButton.Text = ""
-jumpSliderButton.Active = true
-jumpSliderButton.Selectable = true
-jumpSliderButton.Parent = jumpSlider
-
-local jumpSliderButtonCorner = Instance.new("UICorner")
-jumpSliderButtonCorner.CornerRadius = UDim.new(1, 0)
-jumpSliderButtonCorner.Parent = jumpSliderButton
 
 local searchBox = Instance.new("TextBox")
 searchBox.Name = "SearchBox"
@@ -415,19 +320,16 @@ local function toggleTeleportMode()
 end
 
 teleportPlayersButton.MouseButton1Click:Connect(toggleTeleportMode)
-
 searchBox:GetPropertyChangedSignal("Text"):Connect(function()
 	if teleportMode then
 		updateTeleportList()
 	end
 end)
-
 Players.PlayerAdded:Connect(function(plr)
 	if teleportMode then
 		updateTeleportList()
 	end
 end)
-
 Players.PlayerRemoving:Connect(function(plr)
 	if teleportMode then
 		updateTeleportList()
@@ -441,7 +343,6 @@ titleBar.InputBegan:Connect(function(input)
 		startPos = mainFrame.Position
 	end
 end)
-
 minimizedFrame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		isDragging = true
@@ -449,7 +350,6 @@ minimizedFrame.InputBegan:Connect(function(input)
 		startPos = minimizedFrame.Position
 	end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
 	if isDragging then
 		local delta = input.Position - dragStart
@@ -460,43 +360,10 @@ UserInputService.InputChanged:Connect(function(input)
 			minimizedFrame.Position = newPosition
 		end
 	end
-	
-	if isDraggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		local sliderPos = speedSlider.AbsolutePosition
-		local sliderSize = speedSlider.AbsoluteSize
-		local mousePos = input.Position
-		local relativeX = math.clamp(mousePos.X - sliderPos.X, 0, sliderSize.X)
-		local percentage = relativeX / sliderSize.X
-		local speed = math.floor(minSpeed + (maxSpeed - minSpeed) * percentage)
-		sliderButton.Position = UDim2.new(percentage, -8, 0.5, -8)
-		currentSpeed = speed
-		speedButton.Text = "Скорость: " .. speed
-		if player.Character and player.Character:FindFirstChild("Humanoid") then
-			player.Character.Humanoid.WalkSpeed = speed
-		end
-	end
-	
-	if isDraggingJump and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		local sliderPos = jumpSlider.AbsolutePosition
-		local sliderSize = jumpSlider.AbsoluteSize
-		local mousePos = input.Position
-		local relativeX = math.clamp(mousePos.X - sliderPos.X, 0, sliderSize.X)
-		local percentage = relativeX / sliderSize.X
-		local newJump = math.floor(minJump + (maxJump - minJump) * percentage)
-		jumpSliderButton.Position = UDim2.new(percentage, -8, 0.5, -8)
-		currentJump = newJump
-		jumpButton.Text = "Прыжок: " .. newJump
-		if player.Character and player.Character:FindFirstChild("Humanoid") then
-			player.Character.Humanoid.JumpPower = newJump
-		end
-	end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		isDragging = false
-		isDraggingSlider = false
-		isDraggingJump = false
 	end
 end)
 
@@ -505,7 +372,6 @@ minimizeButton.MouseButton1Click:Connect(function()
 	minimizedFrame.Visible = true
 	minimizedFrame.Position = mainFrame.Position
 end)
-
 minimizedFrame.MouseButton1Click:Connect(function()
 	mainFrame.Visible = true
 	minimizedFrame.Visible = false
@@ -513,89 +379,45 @@ minimizedFrame.MouseButton1Click:Connect(function()
 end)
 
 speedButton.MouseButton1Click:Connect(function()
-	speedButton.Visible = false
-	speedInput.Visible = true
-	speedInput:CaptureFocus()
-	speedInput.Text = ""
-end)
-
-speedInput.FocusLost:Connect(function(enterPressed)
-	if not enterPressed then
-		speedInput.Visible = false
-		speedButton.Visible = true
-		speedInput.Text = tostring(currentSpeed)
-		return
-	end
-	local inputSpeed = tonumber(speedInput.Text)
-	if inputSpeed then
-		inputSpeed = math.clamp(inputSpeed, minSpeed, maxSpeed)
-		currentSpeed = inputSpeed
-		local percentage = (inputSpeed - minSpeed) / (maxSpeed - minSpeed)
-		sliderButton.Position = UDim2.new(percentage, -8, 0.5, -8)
+	if not speedActivated then
+		speedActivated = true
+		currentSpeed = maxSpeed
 		if player.Character and player.Character:FindFirstChild("Humanoid") then
-			player.Character.Humanoid.WalkSpeed = inputSpeed
+			player.Character.Humanoid.WalkSpeed = maxSpeed
 		end
+		speedButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+		speedButton.TextColor3 = Color3.fromRGB(0, 0, 0)
 	else
-		inputSpeed = currentSpeed
+		speedActivated = false
+		currentSpeed = minSpeed
+		if player.Character and player.Character:FindFirstChild("Humanoid") then
+			player.Character.Humanoid.WalkSpeed = minSpeed
+		end
+		speedButton.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+		speedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	end
-	speedButton.Text = "Скорость: " .. inputSpeed
-	speedInput.Visible = false
-	speedButton.Visible = true
-end)
-
-speedSlider.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		isDraggingSlider = true
-	end
-end)
-
-sliderButton.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		isDraggingSlider = true
-	end
+	speedButton.Text = "Большая скорость"
 end)
 
 jumpButton.MouseButton1Click:Connect(function()
-	jumpButton.Visible = false
-	jumpInput.Visible = true
-	jumpInput:CaptureFocus()
-	jumpInput.Text = ""
-end)
-
-jumpInput.FocusLost:Connect(function(enterPressed)
-	if not enterPressed then
-		jumpInput.Visible = false
-		jumpButton.Visible = true
-		jumpInput.Text = tostring(currentJump)
-		return
-	end
-	local inputJump = tonumber(jumpInput.Text)
-	if inputJump then
-		inputJump = math.clamp(inputJump, minJump, maxJump)
-		currentJump = inputJump
-		local percentage = (inputJump - minJump) / (maxJump - minJump)
-		jumpSliderButton.Position = UDim2.new(percentage, -8, 0.5, -8)
+	if not jumpActivated then
+		jumpActivated = true
+		currentJump = maxJump
 		if player.Character and player.Character:FindFirstChild("Humanoid") then
-			player.Character.Humanoid.JumpPower = inputJump
+			player.Character.Humanoid.JumpPower = maxJump
 		end
+		jumpButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+		jumpButton.TextColor3 = Color3.fromRGB(0, 0, 0)
 	else
-		inputJump = currentJump
+		jumpActivated = false
+		currentJump = minJump
+		if player.Character and player.Character:FindFirstChild("Humanoid") then
+			player.Character.Humanoid.JumpPower = minJump
+		end
+		jumpButton.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+		jumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	end
-	jumpButton.Text = "Прыжок: " .. inputJump
-	jumpInput.Visible = false
-	jumpButton.Visible = true
-end)
-
-jumpSlider.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		isDraggingJump = true
-	end
-end)
-
-jumpSliderButton.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		isDraggingJump = true
-	end
+	jumpButton.Text = "Высокий прыжок"
 end)
 
 local function toggleFly()
