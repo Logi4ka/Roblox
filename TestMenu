@@ -55,8 +55,8 @@ local screenGui = create("ScreenGui", {
 
 local mainFrame = create("Frame", {
 	Name = "MainFrame",
-	Size = UDim2.new(0, 200, 0, 295),
-	Position = UDim2.new(0.5, -100, 0.5, -150),
+	Size = UDim2.new(0,200,0,295),
+	Position = UDim2.new(0.5,-100,0.5,-150),
 	BackgroundColor3 = Color3.fromRGB(45,45,45),
 	BorderSizePixel = 0,
 	Active = true,
@@ -120,7 +120,7 @@ local function createSlider(parent, labelText, initialVal, minVal, maxVal, posY)
 		BackgroundTransparency = 1,
 		Active = true,
 		Selectable = true,
-	}, mainFrame)
+	}, parent)
 	
 	local button = createButton("Button", labelText .. ": " .. initialVal, UDim2.new(0.9,0,0,40), UDim2.new(0.05,0,0,0), container)
 	local input = create("TextBox", {
@@ -175,6 +175,7 @@ local function createSlider(parent, labelText, initialVal, minVal, maxVal, posY)
 		Min = minVal,
 		Max = maxVal,
 		LabelText = labelText,
+		dragging = false,
 		SetValue = function(self, newVal)
 			newVal = math.clamp(newVal, self.Min, self.Max)
 			local perc = (newVal - self.Min) / (self.Max - self.Min)
@@ -204,6 +205,25 @@ local searchBox = create("TextBox", {
 	Visible = false,
 }, mainFrame)
 
+-- Новая логика для SearchBox:
+local searchBoxClickReady = false
+searchBox.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if not searchBox:IsFocused() then
+			if not searchBoxClickReady then
+				searchBox.Text = ""
+				searchBoxClickReady = true
+			else
+				searchBox:CaptureFocus()
+				searchBoxClickReady = false
+			end
+		end
+	end
+end)
+searchBox.FocusLost:Connect(function(enterPressed)
+	searchBoxClickReady = false
+end)
+
 local teleportScrollFrame = create("ScrollingFrame", {
 	Name = "TeleportScrollFrame",
 	Position = UDim2.new(0,0,0,112),
@@ -222,7 +242,6 @@ local listLayout = create("UIListLayout", {
 
 local function updateTeleportList()
 	teleportScrollFrame:ClearAllChildren()
-	-- Вновь создаём layout, чтобы обновлялся CanvasSize
 	listLayout = create("UIListLayout", {
 		Padding = UDim.new(0,4),
 		SortOrder = Enum.SortOrder.LayoutOrder,
@@ -319,7 +338,7 @@ local function updateDrag(input)
 end
 
 titleBar.InputBegan:Connect(function(input) startDrag(input, mainFrame) end)
- 
+
 ---------------------------------------------------------------------
 -- Минимизированное окно
 
@@ -356,9 +375,8 @@ end)
 
 UserInputService.InputChanged:Connect(function(input)
 	updateDrag(input)
-	
 	-- Обработка слайдеров скорости и прыжка
-	if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 		-- Скорость
 		if speedControl.dragging then
 			local sliderPos = speedControl.Slider.AbsolutePosition
@@ -398,7 +416,7 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
--- Обработка кликов по слайдеру и кнопкам ввода
+-- Обработка кликов по слайдерам и полям ввода
 speedControl.Button.MouseButton1Click:Connect(function()
 	speedControl.Button.Visible = false
 	speedControl.Input.Visible = true
@@ -474,7 +492,7 @@ local function toggleFly()
 		if isFlying then
 			flyButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
 			flyButton.TextColor3 = Color3.fromRGB(0,0,0)
-			-- Подключаем событие на прыжок
+			-- Подключаем событие JumpRequest для полёта
 			UserInputService.JumpRequest:Connect(function()
 				if isFlying and player.Character and player.Character:FindFirstChild("Humanoid") then
 					player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
