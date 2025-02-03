@@ -111,82 +111,31 @@ create("UICorner", { CornerRadius = UDim.new(0,4) }, flyButton)
 local noClipButton = createButton("Ходить сквозь стеныButton", "Ходить сквозь стены", UDim2.new(0.9,0,0,40), UDim2.new(0.05,0,0,122), mainFrame)
 
 ---------------------------------------------------------------------
--- Создание слайдеров для скорости и прыжка
+-- Создание кнопок для супер скорости и супер прыжка
+local superSpeedButton = createButton("SuperSpeedButton", "Супер скорость", UDim2.new(0.9,0,0,40), UDim2.new(0.05,0,0,166), mainFrame)
+local superJumpButton = createButton("SuperJumpButton", "Супер прыжок", UDim2.new(0.9,0,0,40), UDim2.new(0.05,0,0,210), mainFrame)
 
-local function createSlider(parent, labelText, initialVal, minVal, maxVal, posY)
-	local container = create("Frame", {
-		Size = UDim2.new(0,200,0,60),
-		Position = UDim2.new(0,0,0,posY),
-		BackgroundTransparency = 1,
-		Active = true,
-		Selectable = true,
-	}, parent)
-	
-	local button = createButton("Button", labelText .. ": " .. initialVal, UDim2.new(0.9,0,0,40), UDim2.new(0.05,0,0,0), container)
-	local input = create("TextBox", {
-		Size = button.Size,
-		Position = button.Position,
-		BackgroundColor3 = Color3.fromRGB(65,65,65),
-		BorderSizePixel = 0,
-		TextColor3 = Color3.fromRGB(255,255,255),
-		TextSize = 14,
-		Font = Enum.Font.Gotham,
-		Text = tostring(initialVal),
-		ClearTextOnFocus = true,
-		Visible = false,
-		Active = true,
-		Selectable = true,
-	}, container)
-	-- Фильтр ввода: только цифры
-	input:GetPropertyChangedSignal("Text"):Connect(function()
-		local newText = input.Text:match("^%d*$") or ""
-		if newText ~= input.Text then
-			input.Text = newText
-		end
-	end)
-	
-	local slider = create("Frame", {
-		Size = UDim2.new(0.9,0,0,4),
-		Position = UDim2.new(0.05,0,0,50),
-		BackgroundColor3 = Color3.fromRGB(65,65,65),
-		BorderSizePixel = 0,
-		Active = true,
-		Selectable = true,
-	}, container)
-	create("UICorner", { CornerRadius = UDim.new(1,0) }, slider)
-	local initPerc = (initialVal - minVal) / (maxVal - minVal)
-	local sliderButton = create("TextButton", {
-		Size = UDim2.new(0,16,0,16),
-		Position = UDim2.new(initPerc, -8, 0.5, -8),
-		BackgroundColor3 = Color3.fromRGB(255,255,255),
-		BorderSizePixel = 0,
-		Text = "",
-		Active = true,
-		Selectable = true,
-	}, slider)
-	create("UICorner", { CornerRadius = UDim.new(1,0) }, sliderButton)
-	
-	return {
-		Container = container,
-		Button = button,
-		Input = input,
-		Slider = slider,
-		SliderButton = sliderButton,
-		Min = minVal,
-		Max = maxVal,
-		LabelText = labelText,
-		dragging = false,
-		SetValue = function(self, newVal)
-			newVal = math.clamp(newVal, self.Min, self.Max)
-			local perc = (newVal - self.Min) / (self.Max - self.Min)
-			self.SliderButton.Position = UDim2.new(perc, -8, 0.5, -8)
-			self.Button.Text = self.LabelText .. ": " .. newVal
-		end
-	}
+-- Функция переключения супер скорости
+local function toggleSuperSpeed()
+	currentSpeed = (currentSpeed == 16) and 100 or 16
+	superSpeedButton.Text = (currentSpeed == 100) and "Супер скорость: Включено" or "Супер скорость"
+	superSpeedButton.BackgroundColor3 = (currentSpeed == 100) and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(65, 65, 65)
+	if player.Character and player.Character:FindFirstChild("Humanoid") then
+		player.Character.Humanoid.WalkSpeed = currentSpeed
+	end
 end
+superSpeedButton.MouseButton1Click:Connect(toggleSuperSpeed)
 
-local speedControl = createSlider(mainFrame, "Скорость", currentSpeed, minSpeed, maxSpeed, 166)
-local jumpControl  = createSlider(mainFrame, "Прыжок", currentJump, minJump, maxJump, 230)
+-- Функция переключения супер прыжка
+local function toggleSuperJump()
+	currentJump = (currentJump == 50) and 100 or 50
+	superJumpButton.Text = (currentJump == 100) and "Супер прыжок: Включено" or "Супер прыжок"
+	superJumpButton.BackgroundColor3 = (currentJump == 100) and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(65, 65, 65)
+	if player.Character and player.Character:FindFirstChild("Humanoid") then
+		player.Character.Humanoid.JumpPower = currentJump
+	end
+end
+superJumpButton.MouseButton1Click:Connect(toggleSuperJump)
 
 ---------------------------------------------------------------------
 -- Поиск игроков и список для телепортации
@@ -283,8 +232,8 @@ local function toggleTeleportMode()
 		teleportPlayersButton.Text = "Ввернуться назад"
 		flyButton.Visible = false
 		noClipButton.Visible = false
-		speedControl.Container.Visible = false
-		jumpControl.Container.Visible = false
+		superSpeedButton.Visible = false
+		superJumpButton.Visible = false
 		searchBox.Visible = true
 		teleportScrollFrame.Position = UDim2.new(0,0,0,114)
 		teleportScrollFrame.Size = UDim2.new(1,0,0, mainFrame.AbsoluteSize.Y - 114 - 5)
@@ -294,8 +243,8 @@ local function toggleTeleportMode()
 		teleportPlayersButton.Text = "Телепортация к игрокам"
 		flyButton.Visible = true
 		noClipButton.Visible = true
-		speedControl.Container.Visible = true
-		jumpControl.Container.Visible = true
+		superSpeedButton.Visible = true
+		superJumpButton.Visible = true
 		searchBox.Visible = false
 		teleportScrollFrame.Visible = false
 		teleportScrollFrame:ClearAllChildren()
@@ -375,170 +324,5 @@ end)
 
 UserInputService.InputChanged:Connect(function(input)
 	updateDrag(input)
-	-- Обработка слайдеров скорости и прыжка
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		-- Скорость
-		if speedControl.dragging then
-			local sliderPos = speedControl.Slider.AbsolutePosition
-			local sliderSize = speedControl.Slider.AbsoluteSize
-			local relativeX = math.clamp(input.Position.X - sliderPos.X, 0, sliderSize.X)
-			local perc = relativeX / sliderSize.X
-			local newSpeed = math.floor(minSpeed + (maxSpeed - minSpeed) * perc)
-			speedControl.SliderButton.Position = UDim2.new(perc, -8, 0.5, -8)
-			currentSpeed = newSpeed
-			speedControl.Button.Text = "Скорость: " .. newSpeed
-			if player.Character and player.Character:FindFirstChild("Humanoid") then
-				player.Character.Humanoid.WalkSpeed = newSpeed
-			end
-		end
-		-- Прыжок
-		if jumpControl.dragging then
-			local sliderPos = jumpControl.Slider.AbsolutePosition
-			local sliderSize = jumpControl.Slider.AbsoluteSize
-			local relativeX = math.clamp(input.Position.X - sliderPos.X, 0, sliderSize.X)
-			local perc = relativeX / sliderSize.X
-			local newJump = math.floor(minJump + (maxJump - minJump) * perc)
-			jumpControl.SliderButton.Position = UDim2.new(perc, -8, 0.5, -8)
-			currentJump = newJump
-			jumpControl.Button.Text = "Прыжок: " .. newJump
-			if player.Character and player.Character:FindFirstChild("Humanoid") then
-				player.Character.Humanoid.JumpPower = newJump
-			end
-		end
-	end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		isDragging = false
-		speedControl.dragging = false
-		jumpControl.dragging = false
-	end
-end)
-
--- Обработка кликов по слайдерам и полям ввода
-speedControl.Button.MouseButton1Click:Connect(function()
-	speedControl.Button.Visible = false
-	speedControl.Input.Visible = true
-	speedControl.Input:CaptureFocus()
-	speedControl.Input.Text = ""
-end)
-speedControl.Input.FocusLost:Connect(function(enterPressed)
-	local inputVal = tonumber(speedControl.Input.Text)
-	if inputVal then
-		inputVal = math.clamp(inputVal, minSpeed, maxSpeed)
-		currentSpeed = inputVal
-		speedControl:SetValue(inputVal)
-		if player.Character and player.Character:FindFirstChild("Humanoid") then
-			player.Character.Humanoid.WalkSpeed = inputVal
-		end
-	else
-		inputVal = currentSpeed
-	end
-	speedControl.Button.Text = "Скорость: " .. inputVal
-	speedControl.Input.Visible = false
-	speedControl.Button.Visible = true
-end)
-speedControl.Slider.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		speedControl.dragging = true
-	end
-end)
-speedControl.SliderButton.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		speedControl.dragging = true
-	end
-end)
-
-jumpControl.Button.MouseButton1Click:Connect(function()
-	jumpControl.Button.Visible = false
-	jumpControl.Input.Visible = true
-	jumpControl.Input:CaptureFocus()
-	jumpControl.Input.Text = ""
-end)
-jumpControl.Input.FocusLost:Connect(function(enterPressed)
-	local inputVal = tonumber(jumpControl.Input.Text)
-	if inputVal then
-		inputVal = math.clamp(inputVal, minJump, maxJump)
-		currentJump = inputVal
-		jumpControl:SetValue(inputVal)
-		if player.Character and player.Character:FindFirstChild("Humanoid") then
-			player.Character.Humanoid.JumpPower = inputVal
-		end
-	else
-		inputVal = currentJump
-	end
-	jumpControl.Button.Text = "Прыжок: " .. inputVal
-	jumpControl.Input.Visible = false
-	jumpControl.Button.Visible = true
-end)
-jumpControl.Slider.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		jumpControl.dragging = true
-	end
-end)
-jumpControl.SliderButton.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		jumpControl.dragging = true
-	end
-end)
-
----------------------------------------------------------------------
--- Функционал "Полёта" и "Хождения сквозь стены"
-
-local function toggleFly()
-	isFlying = not isFlying
-	if player.Character then
-		if isFlying then
-			flyButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
-			flyButton.TextColor3 = Color3.fromRGB(0,0,0)
-			-- Подключаем событие JumpRequest для полёта
-			UserInputService.JumpRequest:Connect(function()
-				if isFlying and player.Character and player.Character:FindFirstChild("Humanoid") then
-					player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-				end
-			end)
-		else
-			flyButton.BackgroundColor3 = Color3.fromRGB(65,65,65)
-			flyButton.TextColor3 = Color3.fromRGB(255,255,255)
-		end
-	end
-end
-flyButton.MouseButton1Click:Connect(toggleFly)
-
-local function toggleNoClip()
-	isNoClip = not isNoClip
-	if isNoClip then
-		noClipButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
-		noClipButton.TextColor3 = Color3.fromRGB(0,0,0)
-	else
-		noClipButton.BackgroundColor3 = Color3.fromRGB(65,65,65)
-		noClipButton.TextColor3 = Color3.fromRGB(255,255,255)
-	end
-end
-noClipButton.MouseButton1Click:Connect(toggleNoClip)
-
-player.CharacterAdded:Connect(function(character)
-	local humanoid = character:WaitForChild("Humanoid")
-	humanoid.WalkSpeed = currentSpeed
-	humanoid.JumpPower = currentJump
-	if isFlying then
-		flyButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
-		flyButton.TextColor3 = Color3.fromRGB(0,0,0)
-		UserInputService.JumpRequest:Connect(function()
-			if isFlying and character and character:FindFirstChild("Humanoid") then
-				character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-			end
-		end)
-	end
-end)
-
-RunService.Stepped:Connect(function()
-	if isNoClip and player.Character then
-		for _, part in pairs(player.Character:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.CanCollide = false
-			end
-		end
-	end
-end)
