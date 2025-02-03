@@ -49,7 +49,7 @@ local mainFrame = create("Frame", {
 })
 create("UICorner", {CornerRadius = UDim.new(0,8), Parent = mainFrame})
 
--- Панель заголовка и кнопка сворачивания
+-- Панель заголовка и кнопки
 local titleBar = create("Frame", {
 	Name = "TitleBar",
 	Size = UDim2.new(1,0,0,30),
@@ -71,6 +71,8 @@ local titleText = create("TextLabel", {
 	TextXAlignment = Enum.TextXAlignment.Left,
 	Parent = titleBar,
 })
+
+-- Кнопка сворачивания
 local minimizeButton = create("TextButton", {
 	Name = "MinimizeButton",
 	Size = UDim2.new(0,20,0,20),
@@ -91,6 +93,27 @@ local indicator = create("Frame", {
 	Parent = minimizeButton,
 })
 create("UICorner", {CornerRadius = UDim.new(1,0), Parent = indicator})
+
+-- Новая кнопка для уничтожения скрипта (Destroy)
+local destroyButton = create("TextButton", {
+	Name = "DestroyButton",
+	Size = UDim2.new(0,20,0,20),
+	-- Расположим её слева от кнопки сворачивания:
+	Position = UDim2.new(1, -50, 0, 5),
+	BackgroundColor3 = Color3.fromRGB(255,0,0),  -- красный цвет для предупреждения
+	BorderSizePixel = 0,
+	Text = "X",
+	TextColor3 = Color3.new(1,1,1),
+	Font = Enum.Font.GothamBold,
+	TextSize = 14,
+	Active = true,
+	Selectable = true,
+	Parent = titleBar,
+})
+create("UICorner", {CornerRadius = UDim.new(0,4), Parent = destroyButton})
+destroyButton.MouseButton1Click:Connect(function()
+	script:Destroy()
+end)
 
 -- Функция для создания кнопок меню
 local function createMenuButton(name, text, positionY, parent)
@@ -289,6 +312,10 @@ local function updateTeleportList()
 					AutoButtonColor = false,
 					Parent = teleportScrollFrame,
 				})
+				-- Для центрирования: задаём якорь и позицию по центру
+				playerButton.AnchorPoint = Vector2.new(0.5, 0)
+				playerButton.Position = UDim2.new(0.5, 0, 0, 0)
+				
 				playerButton.InputBegan:Connect(function(input)
 					if isMouseOrTouch(input) then
 						playerButton.BackgroundColor3 = Color3.fromRGB(100,100,100)
