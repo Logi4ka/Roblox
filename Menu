@@ -295,7 +295,7 @@ end
 local function toggleTeleportMode()
 	teleportMode = not teleportMode
 	if teleportMode then
-		teleportPlayersButton.Text = "Ввернуться назад"
+		teleportPlayersButton.Text = "Вернуться назад"
 		flyButton.Visible = false
 		noClipButton.Visible = false
 		speedFrame.Visible = false
