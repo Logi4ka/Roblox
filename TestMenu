@@ -49,7 +49,7 @@ local mainFrame = create("Frame", {
 })
 create("UICorner", {CornerRadius = UDim.new(0,8), Parent = mainFrame})
 
--- Панель заголовка и кнопки
+-- Панель заголовка и кнопка сворачивания
 local titleBar = create("Frame", {
 	Name = "TitleBar",
 	Size = UDim2.new(1,0,0,30),
@@ -62,7 +62,7 @@ local titleBar = create("Frame", {
 create("UICorner", {CornerRadius = UDim.new(0,8), Parent = titleBar})
 local titleText = create("TextLabel", {
 	Text = "Logdrinos Menu v3.4",
-	Size = UDim2.new(1, -70, 1, 0), -- уменьшаем ширину, чтобы место осталось под кнопки
+	Size = UDim2.new(1, -40, 1, 0),
 	Position = UDim2.new(0,10,0,0),
 	BackgroundTransparency = 1,
 	TextColor3 = Color3.new(1,1,1),
@@ -71,46 +71,26 @@ local titleText = create("TextLabel", {
 	TextXAlignment = Enum.TextXAlignment.Left,
 	Parent = titleBar,
 })
-
--- Новая кнопка для сворачивания меню (иконка "-")
 local minimizeButton = create("TextButton", {
 	Name = "MinimizeButton",
 	Size = UDim2.new(0,20,0,20),
-	-- Поскольку кнопки меняем местами, эта кнопка теперь будет слева
-	Position = UDim2.new(1, -50, 0, 5),
+	Position = UDim2.new(1,-25,0,5),
 	BackgroundColor3 = Color3.fromRGB(65,65,65),
 	BorderSizePixel = 0,
-	Text = "-",  -- символ минуса, как в браузерах
-	TextColor3 = Color3.new(1,1,1),
-	Font = Enum.Font.GothamBold,
-	TextSize = 14,
+	Text = "",
 	Active = true,
 	Selectable = true,
 	Parent = titleBar,
 })
 create("UICorner", {CornerRadius = UDim.new(0,4), Parent = minimizeButton})
--- Убираем старый индикатор, теперь текст кнопки является иконкой
-
--- Новая кнопка для уничтожения скрипта (Destroy)
-local destroyButton = create("TextButton", {
-	Name = "DestroyButton",
-	Size = UDim2.new(0,20,0,20),
-	-- Поскольку кнопки меняем местами, эта кнопка теперь будет справа
-	Position = UDim2.new(1, -25, 0, 5),
-	BackgroundColor3 = Color3.fromRGB(255,0,0),  -- красный цвет
+local indicator = create("Frame", {
+	Size = UDim2.new(0,8,0,8),
+	Position = UDim2.new(0.5,-4,0.5,-4),
+	BackgroundColor3 = Color3.new(1,1,1),
 	BorderSizePixel = 0,
-	Text = "X",
-	TextColor3 = Color3.new(1,1,1),
-	Font = Enum.Font.GothamBold,
-	TextSize = 14,
-	Active = true,
-	Selectable = true,
-	Parent = titleBar,
+	Parent = minimizeButton,
 })
-create("UICorner", {CornerRadius = UDim.new(0,4), Parent = destroyButton})
-destroyButton.MouseButton1Click:Connect(function()
-	script:Destroy()
-end)
+create("UICorner", {CornerRadius = UDim.new(1,0), Parent = indicator})
 
 -- Функция для создания кнопок меню
 local function createMenuButton(name, text, positionY, parent)
@@ -255,6 +235,7 @@ local teleportScrollFrame = create("ScrollingFrame", {
 	Visible = false,
 	Parent = mainFrame,
 })
+-- Создаём UIListLayout один раз и задаём выравнивание по центру
 local listLayout = create("UIListLayout", {
 	Padding = UDim.new(0,4),
 	SortOrder = Enum.SortOrder.LayoutOrder,
@@ -287,7 +268,7 @@ create("UICorner", {CornerRadius = UDim.new(1,0), Parent = minimizedIndicator})
 -----------------------------------------------------------
 -- Функция обновления списка игроков для телепортации
 local function updateTeleportList()
-	-- Очищаем содержимое, но оставляем UIListLayout
+	-- Удаляем только кнопки игроков, оставляя UIListLayout
 	for _, child in ipairs(teleportScrollFrame:GetChildren()) do
 		if child:IsA("TextButton") then
 			child:Destroy()
@@ -298,8 +279,9 @@ local function updateTeleportList()
 		if targetPlayer ~= player then
 			local dispName = targetPlayer.DisplayName
 			if search == "" or string.find(dispName:lower(), search, 1, true) then
+				-- Размер изменён на UDim2.new(1, -8, 0, 30) для центрирования
 				local playerButton = create("TextButton", {
-					Size = UDim2.new(0.9,0,0,30),
+					Size = UDim2.new(1, -8, 0, 30),
 					BackgroundColor3 = Color3.fromRGB(65,65,65),
 					BorderSizePixel = 0,
 					TextColor3 = Color3.new(1,1,1),
@@ -309,10 +291,6 @@ local function updateTeleportList()
 					AutoButtonColor = false,
 					Parent = teleportScrollFrame,
 				})
-				-- Центрируем кнопку: задаём AnchorPoint и Position по горизонтали по центру
-				playerButton.AnchorPoint = Vector2.new(0.5, 0)
-				playerButton.Position = UDim2.new(0.5, 0, 0, 0)
-				
 				playerButton.InputBegan:Connect(function(input)
 					if isMouseOrTouch(input) then
 						playerButton.BackgroundColor3 = Color3.fromRGB(100,100,100)
@@ -432,7 +410,6 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
--- Сворачивание меню (при нажатии на minimizeButton скрываем mainFrame и показываем minimizedFrame)
 minimizeButton.MouseButton1Click:Connect(function()
 	mainFrame.Visible = false
 	minimizedFrame.Visible = true
