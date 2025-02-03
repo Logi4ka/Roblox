@@ -1,350 +1,555 @@
+-- Общая функция для создания экземпляров с установкой свойств
+local function create(className, properties)
+	local inst = Instance.new(className)
+	for prop, val in pairs(properties or {}) do
+		inst[prop] = val
+	end
+	return inst
+end
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+if playerGui:FindFirstChild("LogdrinosMenu") then return end
 
--- Конфигурация
+-- Основные переменные
 local currentSpeed = 16
 local currentJump = 50
-local minSpeed, maxSpeed = 16, 100
-local minJump, maxJump = 50, 100
 local isFlying = false
 local isNoClip = false
+local isDragging = false
+local dragStart, startPos
+local isDraggingSlider = false
+local isDraggingJump = false
 local teleportMode = false
 
--- Вспомогательная функция для создания объектов
-local function create(className, properties, parent)
-    local obj = Instance.new(className)
-    for prop, value in pairs(properties or {}) do
-        obj[prop] = value
-    end
-    if parent then
-        obj.Parent = parent
-    end
-    return obj
+-- Функция для проверки ввода мышью или сенсорного ввода
+local function isMouseOrTouch(input)
+	return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
 end
 
--- Функция создания кнопки (TextButton) с базовыми настройками
-local function createButton(name, text, sizeUDim, posUDim, parent)
-    return create("TextButton", {
-        Name = name,
-        Text = text,
-        Size = sizeUDim,
-        Position = posUDim,
-        BackgroundColor3 = Color3.fromRGB(65,65,65),
-        BorderSizePixel = 0,
-        TextColor3 = Color3.fromRGB(255,255,255),
-        TextSize = 14,
-        Font = Enum.Font.Gotham,
-        AutoButtonColor = false,
-        Active = true,
-        Selectable = true,
-    }, parent)
-end
-
--- Основной ScreenGui
+-- Создаём ScreenGui и основной фрейм
 local screenGui = create("ScreenGui", {
-    Name = "LogdrinosMenu",
-    ResetOnSpawn = false,
-}, playerGui)
-
----------------------------------------------------------------------
--- Создание основного окна и его элементов
-
+	Name = "LogdrinosMenu",
+	ResetOnSpawn = false,
+	Parent = playerGui,
+})
 local mainFrame = create("Frame", {
-    Name = "MainFrame",
-    Size = UDim2.new(0, 200, 0, 295),
-    Position = UDim2.new(0.5, -100, 0.5, -150),
-    BackgroundColor3 = Color3.fromRGB(45,45,45),
-    BorderSizePixel = 0,
-    Active = true,
-    Selectable = true,
-}, screenGui)
-create("UICorner", { CornerRadius = UDim.new(0,8) }, mainFrame)
+	Name = "MainFrame",
+	Size = UDim2.new(0, 200, 0, 295),
+	Position = UDim2.new(0.5, -100, 0.5, -150),
+	BackgroundColor3 = Color3.fromRGB(45,45,45),
+	BorderSizePixel = 0,
+	Active = true,
+	Selectable = true,
+	Parent = screenGui,
+})
+create("UICorner", {CornerRadius = UDim.new(0,8), Parent = mainFrame})
 
+-- Панель заголовка и кнопка сворачивания
 local titleBar = create("Frame", {
-    Name = "TitleBar",
-    Size = UDim2.new(1,0,0,30),
-    BackgroundColor3 = Color3.fromRGB(35,35,35),
-    BorderSizePixel = 0,
-    Active = true,
-    Selectable = true,
-}, mainFrame)
-create("UICorner", { CornerRadius = UDim.new(0,8) }, titleBar)
-
+	Name = "TitleBar",
+	Size = UDim2.new(1,0,0,30),
+	BackgroundColor3 = Color3.fromRGB(35,35,35),
+	BorderSizePixel = 0,
+	Active = true,
+	Selectable = true,
+	Parent = mainFrame,
+})
+create("UICorner", {CornerRadius = UDim.new(0,8), Parent = titleBar})
 local titleText = create("TextLabel", {
-    Text = "Logdrinos Menu v3.5",
-    Size = UDim2.new(1,-40,1,0),
-    Position = UDim2.new(0,10,0,0),
-    BackgroundTransparency = 1,
-    TextColor3 = Color3.fromRGB(255,255,255),
-    TextSize = 14,
-    Font = Enum.Font.GothamBold,
-    TextXAlignment = Enum.TextXAlignment.Left,
-}, titleBar)
-
+	Text = "Logdrinos Menu v3.4",
+	Size = UDim2.new(1, -40, 1, 0),
+	Position = UDim2.new(0,10,0,0),
+	BackgroundTransparency = 1,
+	TextColor3 = Color3.new(1,1,1),
+	TextSize = 14,
+	Font = Enum.Font.GothamBold,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	Parent = titleBar,
+})
 local minimizeButton = create("TextButton", {
-    Name = "MinimizeButton",
-    Size = UDim2.new(0,20,0,20),
-    Position = UDim2.new(1,-25,0,5),
-    BackgroundColor3 = Color3.fromRGB(65,65,65),
-    BorderSizePixel = 0,
-    Text = "",
-    Active = true,
-    Selectable = true,
-}, titleBar)
-create("UICorner", { CornerRadius = UDim.new(0,4) }, minimizeButton)
+	Name = "MinimizeButton",
+	Size = UDim2.new(0,20,0,20),
+	Position = UDim2.new(1,-25,0,5),
+	BackgroundColor3 = Color3.fromRGB(65,65,65),
+	BorderSizePixel = 0,
+	Text = "",
+	Active = true,
+	Selectable = true,
+	Parent = titleBar,
+})
+create("UICorner", {CornerRadius = UDim.new(0,4), Parent = minimizeButton})
 local indicator = create("Frame", {
-    Size = UDim2.new(0,8,0,8),
-    Position = UDim2.new(0.5,-4,0.5,-4),
-    BackgroundColor3 = Color3.fromRGB(255,255,255),
-    BorderSizePixel = 0,
-}, minimizeButton)
-create("UICorner", { CornerRadius = UDim.new(1,0) }, indicator)
+	Size = UDim2.new(0,8,0,8),
+	Position = UDim2.new(0.5,-4,0.5,-4),
+	BackgroundColor3 = Color3.new(1,1,1),
+	BorderSizePixel = 0,
+	Parent = minimizeButton,
+})
+create("UICorner", {CornerRadius = UDim.new(1,0), Parent = indicator})
 
--- Кнопки и элементы меню
-local teleportPlayersButton = createButton("TeleportPlayersButton", "Телепортация к игрокам", UDim2.new(0.9,0,0,40), UDim2.new(0.05,0,0,34), mainFrame)
-local flyButton = createButton("ПолётButton", "Полёт", UDim2.new(0.9,0,0,40), UDim2.new(0.05,0,0,78), mainFrame)
-create("UICorner", { CornerRadius = UDim.new(0,4) }, flyButton)
-local noClipButton = createButton("Ходить сквозь стеныButton", "Ходить сквозь стены", UDim2.new(0.9,0,0,40), UDim2.new(0.05,0,0,122), mainFrame)
-
----------------------------------------------------------------------
--- Слайдеры скорости и прыжка удалены, заменены на кнопки
-
-local function toggleSpeed()
-    if currentSpeed == 16 then
-        currentSpeed = 100
-    else
-        currentSpeed = 16
-    end
-    if player.Character and player.Character:FindFirstChild("Humanoid") then
-        player.Character.Humanoid.WalkSpeed = currentSpeed
-    end
+-- Функция для создания кнопок меню
+local function createMenuButton(name, text, positionY, parent)
+	local btn = create("TextButton", {
+		Name = name,
+		Size = UDim2.new(0.9,0,0,40),
+		Position = UDim2.new(0.05,0,0,positionY),
+		BackgroundColor3 = Color3.fromRGB(65,65,65),
+		BorderSizePixel = 0,
+		TextColor3 = Color3.new(1,1,1),
+		TextSize = 14,
+		Font = Enum.Font.Gotham,
+		Text = text,
+		Active = true,
+		Selectable = true,
+		AutoButtonColor = false,
+		Parent = parent,
+	})
+	create("UICorner", {CornerRadius = UDim.new(0,4), Parent = btn})
+	return btn
 end
 
-local function toggleJump()
-    if currentJump == 50 then
-        currentJump = 100
-    else
-        currentJump = 50
-    end
-    if player.Character and player.Character:FindFirstChild("Humanoid") then
-        player.Character.Humanoid.JumpPower = currentJump
-    end
+local teleportPlayersButton = createMenuButton("TeleportPlayersButton", "Телепортация к игрокам", 34, mainFrame)
+local flyButton = createMenuButton("ПолётButton", "Полёт", 78, mainFrame)
+local noClipButton = createMenuButton("Ходить сквозь стеныButton", "Ходить сквозь стены", 122, mainFrame)
+
+-- Функция для создания фрейма с ползунком и вводом (для скорости и прыжка)
+local function createSliderFrame(name, buttonText, positionY, currentValue, minValue, maxValue, parent)
+	local frame = create("Frame", {
+		Name = name,
+		Size = UDim2.new(0,200,0,60),
+		Position = UDim2.new(0,0,0,positionY),
+		BackgroundTransparency = 1,
+		Active = true,
+		Selectable = true,
+		Parent = parent,
+	})
+	
+	local btn = create("TextButton", {
+		Size = UDim2.new(0.9,0,0,40),
+		Position = UDim2.new(0.05,0,0,0),
+		BackgroundColor3 = Color3.fromRGB(65,65,65),
+		BorderSizePixel = 0,
+		TextColor3 = Color3.new(1,1,1),
+		TextSize = 14,
+		Font = Enum.Font.Gotham,
+		Text = buttonText .. currentValue,
+		Active = true,
+		Selectable = true,
+		Parent = frame,
+	})
+	
+	local input = create("TextBox", {
+		Size = btn.Size,
+		Position = btn.Position,
+		BackgroundColor3 = btn.BackgroundColor3,
+		BorderSizePixel = 0,
+		TextColor3 = btn.TextColor3,
+		TextSize = btn.TextSize,
+		Font = btn.Font,
+		Text = tostring(currentValue),
+		ClearTextOnFocus = true,
+		Visible = false,
+		Active = true,
+		Selectable = true,
+		Parent = frame,
+	})
+	-- Фильтрация ввода (только цифры)
+	input:GetPropertyChangedSignal("Text"):Connect(function()
+		local newText = input.Text:match("^%d*$") or ""
+		if newText ~= input.Text then
+			input.Text = newText
+		end
+	end)
+	
+	local slider = create("Frame", {
+		Size = UDim2.new(0.9,0,0,4),
+		Position = UDim2.new(0.05,0,0,50),
+		BackgroundColor3 = Color3.fromRGB(65,65,65),
+		BorderSizePixel = 0,
+		Active = true,
+		Selectable = true,
+		Parent = frame,
+	})
+	create("UICorner", {CornerRadius = UDim.new(1,0), Parent = slider})
+	
+	local initPerc = (currentValue - minValue) / (maxValue - minValue)
+	local sliderButton = create("TextButton", {
+		Size = UDim2.new(0,16,0,16),
+		Position = UDim2.new(initPerc, -8, 0.5, -8),
+		BackgroundColor3 = Color3.new(1,1,1),
+		BorderSizePixel = 0,
+		Text = "",
+		Active = true,
+		Selectable = true,
+		Parent = slider,
+	})
+	create("UICorner", {CornerRadius = UDim.new(1,0), Parent = sliderButton})
+	
+	return {
+		Frame = frame,
+		Button = btn,
+		Input = input,
+		Slider = slider,
+		SliderButton = sliderButton,
+		Min = minValue,
+		Max = maxValue,
+		Update = function(newVal)
+			local percentage = (newVal - minValue) / (maxValue - minValue)
+			sliderButton.Position = UDim2.new(percentage, -8, 0.5, -8)
+			btn.Text = buttonText .. newVal
+		end
+	}
 end
 
--- Привязка событий
-speedControl.Button.MouseButton1Click:Connect(toggleSpeed)
-jumpControl.Button.MouseButton1Click:Connect(toggleJump)
+local speedFrameData = createSliderFrame("SpeedFrame", "Скорость: ", 166, currentSpeed, 16, 100, mainFrame)
+local jumpFrameData = createSliderFrame("JumpFrame", "Прыжок: ", 230, currentJump, 50, 100, mainFrame)
 
----------------------------------------------------------------------
--- Поиск игроков и список для телепортации
-
+-- Поиск и список игроков для телепортации
 local searchBox = create("TextBox", {
-    Name = "SearchBox",
-    Size = UDim2.new(0.9,0,0,30),
-    Position = UDim2.new(0.05,0,0,79),
-    BackgroundColor3 = Color3.fromRGB(65,65,65),
-    BorderSizePixel = 0,
-    TextColor3 = Color3.fromRGB(255,255,255),
-    TextSize = 14,
-    Font = Enum.Font.Gotham,
-    PlaceholderText = "Поиск игрока",
-    Text = "",
-    Visible = false,
-}, mainFrame)
-
+	Name = "SearchBox",
+	Size = UDim2.new(0.9,0,0,30),
+	Position = UDim2.new(0.05,0,0,79),
+	BackgroundColor3 = Color3.fromRGB(65,65,65),
+	BorderSizePixel = 0,
+	TextColor3 = Color3.new(1,1,1),
+	TextSize = 14,
+	Font = Enum.Font.Gotham,
+	PlaceholderText = "Поиск игрока",
+	Text = "",
+	Visible = false,
+	Parent = mainFrame,
+})
 local teleportScrollFrame = create("ScrollingFrame", {
-    Name = "TeleportScrollFrame",
-    Position = UDim2.new(0,0,0,112),
-    Size = UDim2.new(1,0,0,178),
-    BackgroundTransparency = 1,
-    BorderSizePixel = 0,
-    CanvasSize = UDim2.new(0,0,0,0),
-    ScrollBarThickness = 0,
-    Visible = false,
-}, mainFrame)
+	Name = "TeleportScrollFrame",
+	Position = UDim2.new(0,0,0,112),
+	Size = UDim2.new(1,0,0,178),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	CanvasSize = UDim2.new(0,0,0,0),
+	ScrollBarThickness = 0,
+	Visible = false,
+	Parent = mainFrame,
+})
+-- Создаём UIListLayout один раз и задаём выравнивание по центру
 local listLayout = create("UIListLayout", {
-    Padding = UDim.new(0,4),
-    SortOrder = Enum.SortOrder.LayoutOrder,
-    HorizontalAlignment = Enum.HorizontalAlignment.Center,
-}, teleportScrollFrame)
+	Padding = UDim.new(0,4),
+	SortOrder = Enum.SortOrder.LayoutOrder,
+	HorizontalAlignment = Enum.HorizontalAlignment.Center,
+	Parent = teleportScrollFrame,
+})
 
-local searchButtonPressed = false
+local minimizedFrame = create("TextButton", {
+	Name = "MinimizedFrame",
+	Size = UDim2.new(0,40,0,40),
+	Position = mainFrame.Position,
+	BackgroundColor3 = Color3.fromRGB(45,45,45),
+	BorderSizePixel = 0,
+	Visible = false,
+	Text = "",
+	Active = true,
+	Selectable = true,
+	Parent = screenGui,
+})
+create("UICorner", {CornerRadius = UDim.new(1,0), Parent = minimizedFrame})
+local minimizedIndicator = create("Frame", {
+	Size = UDim2.new(0,16,0,16),
+	Position = UDim2.new(0.5,-8,0.5,-8),
+	BackgroundColor3 = Color3.new(1,1,1),
+	BorderSizePixel = 0,
+	Parent = minimizedFrame,
+})
+create("UICorner", {CornerRadius = UDim.new(1,0), Parent = minimizedIndicator})
 
-local function onSearchButtonClick()
-    if searchButtonPressed then
-        searchBox.Text = ""
-    else
-        searchBox.Visible = true
-        searchBox:CaptureFocus()
-    end
-    searchButtonPressed = not searchButtonPressed
-end
-
-teleportPlayersButton.MouseButton1Click:Connect(onSearchButtonClick)
-
+-----------------------------------------------------------
+-- Функция обновления списка игроков для телепортации
 local function updateTeleportList()
-    teleportScrollFrame:ClearAllChildren()
-    listLayout = create("UIListLayout", {
-        Padding = UDim.new(0,4),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-    }, teleportScrollFrame)
-    local search = searchBox.Text:lower() or ""
-    for _, targetPlayer in ipairs(Players:GetPlayers()) do
-        if targetPlayer ~= player then
-            local dispName = targetPlayer.DisplayName
-            if search == "" or string.find(dispName:lower(), search, 1, true) then
-                local playerButton = createButton("PlayerButton", dispName, UDim2.new(0.9,0,0,30), UDim2.new(0,0,0,0), teleportScrollFrame)
-                playerButton.MouseButton1Click:Connect(function()
-                    if player.Character and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                        local targetHRP = targetPlayer.Character.HumanoidRootPart
-                        local newPos = targetHRP.Position - targetHRP.CFrame.LookVector * 5
-                        player.Character:SetPrimaryPartCFrame(CFrame.new(newPos, targetHRP.Position))
-                    end
-                end)
-            end
-        end
-    end
-    teleportScrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
+	-- Удаляем только кнопки игроков, оставляя UIListLayout
+	for _, child in ipairs(teleportScrollFrame:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+	local search = searchBox.Text:lower() or ""
+	for _, targetPlayer in ipairs(Players:GetPlayers()) do
+		if targetPlayer ~= player then
+			local dispName = targetPlayer.DisplayName
+			if search == "" or string.find(dispName:lower(), search, 1, true) then
+				-- Размер изменён на UDim2.new(1, -8, 0, 30) для центрирования
+				local playerButton = create("TextButton", {
+					Size = UDim2.new(1, -8, 0, 30),
+					BackgroundColor3 = Color3.fromRGB(65,65,65),
+					BorderSizePixel = 0,
+					TextColor3 = Color3.new(1,1,1),
+					TextSize = 14,
+					Font = Enum.Font.Gotham,
+					Text = dispName,
+					AutoButtonColor = false,
+					Parent = teleportScrollFrame,
+				})
+				playerButton.InputBegan:Connect(function(input)
+					if isMouseOrTouch(input) then
+						playerButton.BackgroundColor3 = Color3.fromRGB(100,100,100)
+					end
+				end)
+				playerButton.InputEnded:Connect(function(input)
+					if isMouseOrTouch(input) then
+						playerButton.BackgroundColor3 = Color3.fromRGB(65,65,65)
+					end
+				end)
+				playerButton.MouseButton1Click:Connect(function()
+					if player.Character and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+						local targetHRP = targetPlayer.Character.HumanoidRootPart
+						local newPos = targetHRP.Position - targetHRP.CFrame.LookVector * 5
+						player.Character:SetPrimaryPartCFrame(CFrame.new(newPos, targetHRP.Position))
+					end
+				end)
+			end
+		end
+	end
+	teleportScrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
 end
 
 local function toggleTeleportMode()
-    teleportMode = not teleportMode
-    if teleportMode then
-        teleportPlayersButton.Text = "Ввернуться назад"
-        flyButton.Visible = false
-        noClipButton.Visible = false
-        searchBox.Visible = true
-        teleportScrollFrame.Visible = true
-        updateTeleportList()
-    else
-        teleportPlayersButton.Text = "Телепортация к игрокам"
-        flyButton.Visible = true
-        noClipButton.Visible = true
-        searchBox.Visible = false
-        teleportScrollFrame.Visible = false
-        teleportScrollFrame:ClearAllChildren()
-        searchBox.Text = ""
-    end
+	teleportMode = not teleportMode
+	if teleportMode then
+		teleportPlayersButton.Text = "Ввернуться назад"
+		flyButton.Visible = false
+		noClipButton.Visible = false
+		speedFrameData.Frame.Visible = false
+		jumpFrameData.Frame.Visible = false
+		searchBox.Visible = true
+		searchBox.Position = UDim2.new(0.05,0,0,79)
+		teleportScrollFrame.Position = UDim2.new(0,0,0,114)
+		teleportScrollFrame.Size = UDim2.new(1,0,0, mainFrame.AbsoluteSize.Y - 114 - 5)
+		teleportScrollFrame.Visible = true
+		updateTeleportList()
+	else
+		teleportPlayersButton.Text = "Телепортация к игрокам"
+		flyButton.Visible = true
+		noClipButton.Visible = true
+		speedFrameData.Frame.Visible = true
+		jumpFrameData.Frame.Visible = true
+		searchBox.Visible = false
+		teleportScrollFrame.Visible = false
+		teleportScrollFrame:ClearAllChildren()
+		searchBox.Text = ""
+	end
+end
+teleportPlayersButton.MouseButton1Click:Connect(toggleTeleportMode)
+searchBox:GetPropertyChangedSignal("Text"):Connect(function() if teleportMode then updateTeleportList() end end)
+Players.PlayerAdded:Connect(function() if teleportMode then updateTeleportList() end end)
+Players.PlayerRemoving:Connect(function() if teleportMode then updateTeleportList() end end)
+
+-----------------------------------------------------------
+-- Перетаскивание окна (основного и свернутого)
+local function startDrag(input, frame)
+	isDragging = true
+	dragStart = input.Position
+	startPos = frame.Position
 end
 
----------------------------------------------------------------------
--- Перетаскивание окон
-
-local isDragging = false
-local dragStart, startPos
-
-local function startDrag(input, object)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDragging = true
-        dragStart = input.Position
-        if mainFrame.Visible then
-            startPos = mainFrame.Position
-        else
-            startPos = minimizedFrame.Position
-        end
-    end
-end
-
-local function updateDrag(input)
-    if isDragging then
-        local delta = input.Position - dragStart
-        if mainFrame.Visible then
-            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        else
-            minimizedFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end
-end
-
-titleBar.InputBegan:Connect(function(input) startDrag(input, mainFrame) end)
-
----------------------------------------------------------------------
--- Минимизированное окно
-
-local minimizedFrame = create("TextButton", {
-    Name = "MinimizedFrame",
-    Size = UDim2.new(0,40,0,40),
-    Position = mainFrame.Position,
-    BackgroundColor3 = Color3.fromRGB(45,45,45),
-    BorderSizePixel = 0,
-    Text = "",
-    Active = true,
-    Selectable = true,
-    Visible = false,
-}, screenGui)
-create("UICorner", { CornerRadius = UDim.new(1,0) }, minimizedFrame)
-local minimizedIndicator = create("Frame", {
-    Size = UDim2.new(0,16,0,16),
-    Position = UDim2.new(0.5,-8,0.5,-8),
-    BackgroundColor3 = Color3.fromRGB(255,255,255),
-    BorderSizePixel = 0,
-}, minimizedFrame)
-create("UICorner", { CornerRadius = UDim.new(1,0) }, minimizedIndicator)
+titleBar.InputBegan:Connect(function(input)
+	if isMouseOrTouch(input) then
+		startDrag(input, mainFrame)
+	end
+end)
+minimizedFrame.InputBegan:Connect(function(input)
+	if isMouseOrTouch(input) then
+		startDrag(input, minimizedFrame)
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if isDragging then
+		local delta = input.Position - dragStart
+		local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		if mainFrame.Visible then
+			mainFrame.Position = newPos
+		elseif minimizedFrame.Visible then
+			minimizedFrame.Position = newPos
+		end
+	end
+	-- Обработка перемещения ползунков (скорость)
+	if isDraggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local sliderPos = speedFrameData.Slider.AbsolutePosition
+		local sliderSize = speedFrameData.Slider.AbsoluteSize
+		local relativeX = math.clamp(input.Position.X - sliderPos.X, 0, sliderSize.X)
+		local percentage = relativeX / sliderSize.X
+		local speed = math.floor(speedFrameData.Min + (speedFrameData.Max - speedFrameData.Min) * percentage)
+		speedFrameData.SliderButton.Position = UDim2.new(percentage, -8, 0.5, -8)
+		currentSpeed = speed
+		speedFrameData.Button.Text = "Скорость: " .. speed
+		if player.Character and player.Character:FindFirstChild("Humanoid") then
+			player.Character.Humanoid.WalkSpeed = speed
+		end
+	end
+	-- Обработка перемещения ползунка (прыжок)
+	if isDraggingJump and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local sliderPos = jumpFrameData.Slider.AbsolutePosition
+		local sliderSize = jumpFrameData.Slider.AbsoluteSize
+		local relativeX = math.clamp(input.Position.X - sliderPos.X, 0, sliderSize.X)
+		local percentage = relativeX / sliderSize.X
+		local jumpVal = math.floor(jumpFrameData.Min + (jumpFrameData.Max - jumpFrameData.Min) * percentage)
+		jumpFrameData.SliderButton.Position = UDim2.new(percentage, -8, 0.5, -8)
+		currentJump = jumpVal
+		jumpFrameData.Button.Text = "Прыжок: " .. jumpVal
+		if player.Character and player.Character:FindFirstChild("Humanoid") then
+			player.Character.Humanoid.JumpPower = jumpVal
+		end
+	end
+end)
+UserInputService.InputEnded:Connect(function(input)
+	if isMouseOrTouch(input) then
+		isDragging = false
+		isDraggingSlider = false
+		isDraggingJump = false
+	end
+end)
 
 minimizeButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-    minimizedFrame.Visible = true
-    minimizedFrame.Position = mainFrame.Position
+	mainFrame.Visible = false
+	minimizedFrame.Visible = true
+	minimizedFrame.Position = mainFrame.Position
 end)
 minimizedFrame.MouseButton1Click:Connect(function()
-    mainFrame.Visible = true
-    minimizedFrame.Visible = false
-    mainFrame.Position = minimizedFrame.Position
+	mainFrame.Visible = true
+	minimizedFrame.Visible = false
+	mainFrame.Position = minimizedFrame.Position
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-    updateDrag(input)
+-----------------------------------------------------------
+-- Обработка ввода для ползунков (скорость)
+speedFrameData.Button.MouseButton1Click:Connect(function()
+	speedFrameData.Button.Visible = false
+	speedFrameData.Input.Visible = true
+	speedFrameData.Input:CaptureFocus()
+	speedFrameData.Input.Text = ""
+end)
+speedFrameData.Input.FocusLost:Connect(function(enterPressed)
+	local inputSpeed = tonumber(speedFrameData.Input.Text)
+	if enterPressed and inputSpeed then
+		inputSpeed = math.clamp(inputSpeed, speedFrameData.Min, speedFrameData.Max)
+		currentSpeed = inputSpeed
+		local percentage = (inputSpeed - speedFrameData.Min) / (speedFrameData.Max - speedFrameData.Min)
+		speedFrameData.SliderButton.Position = UDim2.new(percentage, -8, 0.5, -8)
+		if player.Character and player.Character:FindFirstChild("Humanoid") then
+			player.Character.Humanoid.WalkSpeed = inputSpeed
+		end
+		speedFrameData.Button.Text = "Скорость: " .. inputSpeed
+	else
+		speedFrameData.Button.Text = "Скорость: " .. currentSpeed
+	end
+	speedFrameData.Input.Visible = false
+	speedFrameData.Button.Visible = true
+end)
+speedFrameData.Slider.InputBegan:Connect(function(input)
+	if isMouseOrTouch(input) then
+		isDraggingSlider = true
+	end
+end)
+speedFrameData.SliderButton.InputBegan:Connect(function(input)
+	if isMouseOrTouch(input) then
+		isDraggingSlider = true
+	end
 end)
 
--- Функционал "Полёта" и "Хождения сквозь стены"
+-- Обработка ввода для ползунка (прыжок)
+jumpFrameData.Button.MouseButton1Click:Connect(function()
+	jumpFrameData.Button.Visible = false
+	jumpFrameData.Input.Visible = true
+	jumpFrameData.Input:CaptureFocus()
+	jumpFrameData.Input.Text = ""
+end)
+jumpFrameData.Input.FocusLost:Connect(function(enterPressed)
+	local inputJump = tonumber(jumpFrameData.Input.Text)
+	if enterPressed and inputJump then
+		inputJump = math.clamp(inputJump, jumpFrameData.Min, jumpFrameData.Max)
+		currentJump = inputJump
+		local percentage = (inputJump - jumpFrameData.Min) / (jumpFrameData.Max - jumpFrameData.Min)
+		jumpFrameData.SliderButton.Position = UDim2.new(percentage, -8, 0.5, -8)
+		if player.Character and player.Character:FindFirstChild("Humanoid") then
+			player.Character.Humanoid.JumpPower = inputJump
+		end
+		jumpFrameData.Button.Text = "Прыжок: " .. inputJump
+	else
+		jumpFrameData.Button.Text = "Прыжок: " .. currentJump
+	end
+	jumpFrameData.Input.Visible = false
+	jumpFrameData.Button.Visible = true
+end)
+jumpFrameData.Slider.InputBegan:Connect(function(input)
+	if isMouseOrTouch(input) then
+		isDraggingJump = true
+	end
+end)
+jumpFrameData.SliderButton.InputBegan:Connect(function(input)
+	if isMouseOrTouch(input) then
+		isDraggingJump = true
+	end
+end)
 
+-----------------------------------------------------------
+-- Функции для полёта и ноклипа
 local function toggleFly()
-    isFlying = not isFlying
-    if player.Character then
-        if isFlying then
-            flyButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
-            flyButton.TextColor3 = Color3.fromRGB(0,0,0)
-        else
-            flyButton.BackgroundColor3 = Color3.fromRGB(65,65,65)
-            flyButton.TextColor3 = Color3.fromRGB(255,255,255)
-        end
-    end
+	isFlying = not isFlying
+	local character = player.Character
+	if character then
+		if isFlying then
+			flyButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
+			flyButton.TextColor3 = Color3.fromRGB(0,0,0)
+			local function onJumpRequest()
+				if isFlying and character and character:FindFirstChild("Humanoid") then
+					character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+				end
+			end
+			-- Можно сохранить соединение, если потребуется отключать
+			UserInputService.JumpRequest:Connect(onJumpRequest)
+		else
+			flyButton.BackgroundColor3 = Color3.fromRGB(65,65,65)
+			flyButton.TextColor3 = Color3.fromRGB(255,255,255)
+		end
+	end
 end
 flyButton.MouseButton1Click:Connect(toggleFly)
 
 local function toggleNoClip()
-    isNoClip = not isNoClip
-    if isNoClip then
-        noClipButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
-        noClipButton.TextColor3 = Color3.fromRGB(0,0,0)
-    else
-        noClipButton.BackgroundColor3 = Color3.fromRGB(65,65,65)
-        noClipButton.TextColor3 = Color3.fromRGB(255,255,255)
-    end
+	isNoClip = not isNoClip
+	if isNoClip then
+		noClipButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
+		noClipButton.TextColor3 = Color3.fromRGB(0,0,0)
+	else
+		noClipButton.BackgroundColor3 = Color3.fromRGB(65,65,65)
+		noClipButton.TextColor3 = Color3.fromRGB(255,255,255)
+	end
 end
 noClipButton.MouseButton1Click:Connect(toggleNoClip)
 
 player.CharacterAdded:Connect(function(character)
-    local humanoid = character:WaitForChild("Humanoid")
-    humanoid.WalkSpeed = currentSpeed
-    humanoid.JumpPower = currentJump
-    if isFlying then
-        flyButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
-        flyButton.TextColor3 = Color3.fromRGB(0,0,0)
-    end
+	local humanoid = character:WaitForChild("Humanoid")
+	humanoid.WalkSpeed = currentSpeed
+	humanoid.JumpPower = currentJump
+	if isFlying then
+		flyButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
+		flyButton.TextColor3 = Color3.fromRGB(0,0,0)
+		local function onJumpRequest()
+			if isFlying and character and character:FindFirstChild("Humanoid") then
+				character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+			end
+		end
+		UserInputService.JumpRequest:Connect(onJumpRequest)
+	end
 end)
 
 RunService.Stepped:Connect(function()
-    if isNoClip and player.Character then
-        for _, part in pairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
+	if isNoClip and player.Character then
+		for _, part in pairs(player.Character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+	end
 end)
