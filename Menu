@@ -5,24 +5,28 @@ local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-if playerGui:FindFirstChild("LogdrinosMenu") then return end
+if playerGui:FindFirstChild("LogdrinosMenu") then
+	return
+end
 
 local currentSpeed = 16
 local currentJump = 50
-local isFlying = false
-local isNoClip = false
-local isDragging = false
-local dragStart
-local startPos
-local teleportMode = false
-
 local minSpeed = 16
 local maxSpeed = 100
 local minJump = 50
 local maxJump = 100
 
+local isFlying = false
+local isNoClip = false
 local speedActivated = false
 local jumpActivated = false
+local espEnabled = false
+
+local isDragging = false
+local dragStart
+local startPos
+
+local teleportMode = false
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "LogdrinosMenu"
@@ -31,7 +35,7 @@ screenGui.Parent = playerGui
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 200, 0, 260)
+mainFrame.Size = UDim2.new(0, 200, 0, 305)
 mainFrame.Position = UDim2.new(0.5, -100, 0.5, -150)
 mainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 mainFrame.BorderSizePixel = 0
@@ -57,7 +61,7 @@ titleCorner.CornerRadius = UDim.new(0, 8)
 titleCorner.Parent = titleBar
 
 local titleText = Instance.new("TextLabel")
-titleText.Text = "Logdrinos Menu v3.5"
+titleText.Text = "Logdrinos Menu v4.2"
 titleText.Size = UDim2.new(1, -40, 1, 0)
 titleText.Position = UDim2.new(0, 10, 0, 0)
 titleText.BackgroundTransparency = 1
@@ -107,27 +111,11 @@ teleportPlayersButton.Active = true
 teleportPlayersButton.Selectable = true
 teleportPlayersButton.Parent = mainFrame
 
-local flyButton = Instance.new("TextButton")
-flyButton.Name = "ПолётButton"
-flyButton.Size = UDim2.new(0.9, 0, 0, 40)
-flyButton.Position = UDim2.new(0.05, 0, 0, 78)
-flyButton.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
-flyButton.BorderSizePixel = 0
-flyButton.Text = "Полёт"
-flyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-flyButton.TextSize = 14
-flyButton.Font = Enum.Font.Gotham
-flyButton.Active = true
-flyButton.Selectable = true
-flyButton.Parent = mainFrame
-local flyButtonCorner = Instance.new("UICorner")
-flyButtonCorner.CornerRadius = UDim.new(0, 4)
-flyButtonCorner.Parent = flyButton
 
 local noClipButton = Instance.new("TextButton")
 noClipButton.Name = "Ходить сквозь стеныButton"
 noClipButton.Size = UDim2.new(0.9, 0, 0, 40)
-noClipButton.Position = UDim2.new(0.05, 0, 0, 122)
+noClipButton.Position = UDim2.new(0.05, 0, 0, 78)
 noClipButton.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
 noClipButton.BorderSizePixel = 0
 noClipButton.Text = "Ходить сквозь стены"
@@ -137,9 +125,29 @@ noClipButton.Font = Enum.Font.Gotham
 noClipButton.Active = true
 noClipButton.Selectable = true
 noClipButton.Parent = mainFrame
+
 local noClipButtonCorner = Instance.new("UICorner")
 noClipButtonCorner.CornerRadius = UDim.new(0, 4)
 noClipButtonCorner.Parent = noClipButton
+
+local flyButton = Instance.new("TextButton")
+flyButton.Name = "ПолётButton"
+flyButton.Size = UDim2.new(0.9, 0, 0, 40)
+flyButton.Position = UDim2.new(0.05, 0, 0, 122)
+flyButton.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+flyButton.BorderSizePixel = 0
+flyButton.Text = "Полёт"
+flyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+flyButton.TextSize = 14
+flyButton.Font = Enum.Font.Gotham
+flyButton.Active = true
+flyButton.Selectable = true
+flyButton.Parent = mainFrame
+
+local flyButtonCorner = Instance.new("UICorner")
+flyButtonCorner.CornerRadius = UDim.new(0, 4)
+flyButtonCorner.Parent = flyButton
+
 
 local speedFrame = Instance.new("Frame")
 speedFrame.Name = "SpeedFrame"
@@ -158,10 +166,11 @@ speedButton.BorderSizePixel = 0
 speedButton.TextColor3 = Color3.fromRGB(255,255,255)
 speedButton.TextSize = 14
 speedButton.Font = Enum.Font.Gotham
-speedButton.Text = "Большая скорость"
+speedButton.Text = "Скорость"
 speedButton.Active = true
 speedButton.Selectable = true
 speedButton.Parent = speedFrame
+
 
 local jumpFrame = Instance.new("Frame")
 jumpFrame.Name = "JumpFrame"
@@ -180,10 +189,34 @@ jumpButton.BorderSizePixel = 0
 jumpButton.TextColor3 = Color3.fromRGB(255,255,255)
 jumpButton.TextSize = 14
 jumpButton.Font = Enum.Font.Gotham
-jumpButton.Text = "Высокий прыжок"
+jumpButton.Text = "Прыжок"
 jumpButton.Active = true
 jumpButton.Selectable = true
 jumpButton.Parent = jumpFrame
+
+
+local espFrame = Instance.new("Frame")
+espFrame.Name = "EspFrame"
+espFrame.Size = UDim2.new(0, 200, 0, 60)
+espFrame.Position = UDim2.new(0, 0, 0, 255)
+espFrame.BackgroundTransparency = 1
+espFrame.Active = true
+espFrame.Selectable = true
+espFrame.Parent = mainFrame
+
+local espButton = Instance.new("TextButton")
+espButton.Size = UDim2.new(0.9, 0, 0, 40)
+espButton.Position = UDim2.new(0.05, 0, 0, 0)
+espButton.BackgroundColor3 = Color3.fromRGB(65,65,65)
+espButton.BorderSizePixel = 0
+espButton.TextColor3 = Color3.fromRGB(255,255,255)
+espButton.TextSize = 14
+espButton.Font = Enum.Font.Gotham
+espButton.Text = "ESP"
+espButton.Active = true
+espButton.Selectable = true
+espButton.Parent = espFrame
+
 
 local searchBox = Instance.new("TextBox")
 searchBox.Name = "SearchBox"
@@ -243,6 +276,7 @@ local minimizedIndicatorCorner = Instance.new("UICorner")
 minimizedIndicatorCorner.CornerRadius = UDim.new(1, 0)
 minimizedIndicatorCorner.Parent = minimizedIndicator
 
+
 local function updateTeleportList()
 	teleportScrollFrame:ClearAllChildren()
 	local layout = Instance.new("UIListLayout")
@@ -295,15 +329,16 @@ end
 local function toggleTeleportMode()
 	teleportMode = not teleportMode
 	if teleportMode then
-		teleportPlayersButton.Text = "Вернуться назад"
+		teleportPlayersButton.Text = "Ввернуться назад"
 		flyButton.Visible = false
 		noClipButton.Visible = false
 		speedFrame.Visible = false
 		jumpFrame.Visible = false
+		espFrame.Visible = false
 		searchBox.Visible = true
 		searchBox.Position = UDim2.new(0.05, 0, 0, 79)
 		teleportScrollFrame.Position = UDim2.new(0, 0, 0, 114)
-		teleportScrollFrame.Size = UDim2.new(1, 0, 0, mainFrame.AbsoluteSize.Y - 114 - 5)
+		teleportScrollFrame.Size = UDim2.new(1, 0, 0, mainFrame.AbsoluteSize.Y - 114 - 10)
 		teleportScrollFrame.Visible = true
 		updateTeleportList()
 	else
@@ -312,6 +347,7 @@ local function toggleTeleportMode()
 		noClipButton.Visible = true
 		speedFrame.Visible = true
 		jumpFrame.Visible = true
+		espFrame.Visible = true
 		searchBox.Visible = false
 		teleportScrollFrame.Visible = false
 		teleportScrollFrame:ClearAllChildren()
@@ -378,6 +414,7 @@ minimizedFrame.MouseButton1Click:Connect(function()
 	mainFrame.Position = minimizedFrame.Position
 end)
 
+
 speedButton.MouseButton1Click:Connect(function()
 	if not speedActivated then
 		speedActivated = true
@@ -396,7 +433,7 @@ speedButton.MouseButton1Click:Connect(function()
 		speedButton.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
 		speedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	end
-	speedButton.Text = "Большая скорость"
+	speedButton.Text = "Скорость"
 end)
 
 jumpButton.MouseButton1Click:Connect(function()
@@ -417,8 +454,145 @@ jumpButton.MouseButton1Click:Connect(function()
 		jumpButton.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
 		jumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	end
-	jumpButton.Text = "Высокий прыжок"
+	jumpButton.Text = "Прыжок"
 end)
+
+
+local activeESPs = {}
+
+
+local activeESPs = {}
+
+local function addESP(character, playerDisplayName)
+	local oldHighlight = character:FindFirstChild("ESPHighlight")
+	if oldHighlight then
+		oldHighlight:Destroy()
+	end
+
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "ESPHighlight"
+	highlight.FillColor = Color3.new(0, 1, 0)
+	highlight.OutlineColor = Color3.new(0, 1, 0)
+	highlight.FillTransparency = 0.5
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.Parent = character
+
+	local head = character:FindFirstChild("Head")
+	if head then
+		local oldBillboard = head:FindFirstChild("ESPLabel")
+		if oldBillboard then
+			oldBillboard:Destroy()
+		end
+
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = "ESPLabel"
+		billboard.AlwaysOnTop = true
+		billboard.Size = UDim2.new(0, 100, 0, 20)
+		billboard.StudsOffset = Vector3.new(0, 2, 0)
+		billboard.Parent = head
+
+		local nameLabel = Instance.new("TextLabel")
+		nameLabel.Name = "NameLabel"
+		nameLabel.Size = UDim2.new(1, 0, 1, 0)
+		nameLabel.Position = UDim2.new(0, 0, 0, 0)
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.Text = string.format("%s (0)", playerDisplayName)
+		nameLabel.TextColor3 = Color3.new(0, 1, 0)
+		nameLabel.TextScaled = false
+		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.TextStrokeTransparency = 0.5
+		nameLabel.TextSize = 14
+		nameLabel.Parent = billboard
+
+		activeESPs[character] = {
+			nameLabel = nameLabel,
+			head = head,
+			displayName = playerDisplayName
+		}
+	end
+
+	local humanoid = character:FindFirstChild("Humanoid")
+	if humanoid then
+		humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	end
+end
+
+local function removeESP(character)
+	local highlight = character:FindFirstChild("ESPHighlight")
+	if highlight then
+		highlight:Destroy()
+	end
+	local head = character:FindFirstChild("Head")
+	if head then
+		local billboard = head:FindFirstChild("ESPLabel")
+		if billboard then
+			billboard:Destroy()
+		end
+	end
+	local humanoid = character:FindFirstChild("Humanoid")
+	if humanoid then
+		humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
+	end
+	activeESPs[character] = nil
+end
+
+RunService.RenderStepped:Connect(function()
+	if not player.Character or not player.Character:FindFirstChild("Head") then return end
+	local localHeadPos = player.Character.Head.Position
+	for character, data in pairs(activeESPs) do
+		if character and character.Parent then
+			local head = data.head
+			if head then
+				local distance = (head.Position - localHeadPos).Magnitude
+				data.nameLabel.Text = string.format("%s (%d)", data.displayName, math.floor(distance))
+			end
+		end
+	end
+end)
+
+espButton.MouseButton1Click:Connect(function()
+	espEnabled = not espEnabled
+	if espEnabled then
+		espButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+		espButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= player and p.Character then
+				addESP(p.Character, p.DisplayName)
+			end
+		end
+	else
+		espButton.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+		espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= player and p.Character then
+				removeESP(p.Character)
+			end
+		end
+	end
+end)
+
+Players.PlayerAdded:Connect(function(p)
+	if p ~= player then
+		p.CharacterAdded:Connect(function(character)
+			if espEnabled then
+				wait(0.1)
+				addESP(character, p.DisplayName)
+			end
+		end)
+	end
+end)
+
+for _, p in ipairs(Players:GetPlayers()) do
+	if p ~= player then
+		p.CharacterAdded:Connect(function(character)
+			if espEnabled then
+				wait(0.1)
+				addESP(character, p.DisplayName)
+			end
+		end)
+	end
+end
+
 
 local function toggleFly()
 	isFlying = not isFlying
@@ -458,7 +632,7 @@ player.CharacterAdded:Connect(function(character)
 	humanoid.WalkSpeed = currentSpeed
 	humanoid.JumpPower = currentJump
 	if isFlying then
-		flyButton.BackgroundColor3 = Color3.fromRGB(0,255,0)
+		flyButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
 		flyButton.TextColor3 = Color3.fromRGB(0, 0, 0)
 		local function onJumpRequest()
 			if isFlying and character and character:FindFirstChild("Humanoid") then
